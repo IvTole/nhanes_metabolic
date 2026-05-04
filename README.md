@@ -8,6 +8,26 @@ Zhang, Y., Wu, H., Ma, R., Feng, B., Yang, R., Chen, X., Li, M., & Cheng, L. (20
 
 ---
 
+## Estructura del repositorio
+
+```
+nhanes_metabolic/
+├── data/               # Datos descargados de NHANES y dataset final (ignorados por git por conveniencia)
+├── notebooks/          # Análisis exploratorio y experimentación (en proceso)
+└── src/
+    ├── config.py           # Variables relevantes: ciclos, años y columnas por catálogo
+    ├── nhanes_r_loader.py  # Carga de datos desde R vía rpy2
+    └── create_df.py        # Construcción del dataset consolidado
+```
+
+## Orden de ejecución
+
+```bash
+python src/create_df.py   # Descarga catálogos de NHANES y genera data/nhanes_raw.csv
+```
+
+---
+
 ## Requisito: instalación del paquete `nhanesdata` en R
 
 Este proyecto utiliza la función `load_nhanes_data` para descargar datos de NHANES mediante R, usando la librería `rpy2` como puente entre Python y R. Es necesario que el paquete `nhanesdata` esté instalado en el entorno de R que utiliza `rpy2`.
