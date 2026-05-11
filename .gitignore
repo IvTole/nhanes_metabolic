@@ -12,7 +12,7 @@
 
 # Notebooks
 /notebooks/*.ipynb
-/notebooks/*.py
+#/notebooks/*.py
 
 # Paper
 /paper
