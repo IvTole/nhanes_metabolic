@@ -8,7 +8,7 @@
 **/__pycache__
 
 # Data
-/data/*.csv
+#/data/*.csv
 
 # Notebooks
 /notebooks/*.ipynb
