@@ -9,6 +9,7 @@ def _():
     import marimo as mo
     import sys
     import pandas as pd
+    from scipy import stats
     import numpy as np
     np.set_printoptions(threshold=sys.maxsize)
     import os
@@ -16,7 +17,7 @@ def _():
 
     import miceforest as mf
 
-    return mf, mo, np, os, pd, plt
+    return mf, mo, np, os, pd, stats
 
 
 @app.cell(hide_code=True)
@@ -29,20 +30,37 @@ def _(mo):
 
 @app.cell
 def _(mo, os, pd):
-    # Complete data
+    # Raw NHANES data
     data_path = "../data"
     file_path = os.path.join(data_path, "nhanes_raw.csv")
 
     df_nhanes = pd.read_csv(filepath_or_buffer=file_path)
     df_nhanes = df_nhanes.drop(columns=['seqn'])
 
-    mo.ui.table(df_nhanes.tail(5))
-    return (df_nhanes,)
+    # Create bmi column
+    df_nhanes["bmi"] = df_nhanes["bmxwt"] / (df_nhanes["bmxht"] / 100)**2.0
+
+    # BMI percentile (CDC 2000 paper)
+
+
+    mo.ui.table(df_nhanes.head(5))
+    return data_path, df_nhanes
+
+
+@app.cell
+def _(data_path, mo, os, pd):
+    # BMI CDC 2000 percentiles parameters
+    cdc_bmi_path = os.path.join(data_path,"bmiagerev.csv")
+
+    df_cdc_bmi = pd.read_csv(cdc_bmi_path) 
+
+    mo.ui.table(df_cdc_bmi.head())
+    return (df_cdc_bmi,)
 
 
 @app.cell
 def _(df_nhanes):
-    # DataFrame columns
+    # NHANES DataFrame columns
     for col in df_nhanes.columns:
         print(col)
     return
@@ -96,6 +114,41 @@ def _(df_nhanes):
 
     print(df_filtered.info())
     return (df_filtered,)
+
+
+@app.cell
+def _(df_cdc_bmi, np, pd, stats):
+    # Hacer interpolacion no es necesario pues la edad siempre está puesta en años enteros
+    # Además, podemos utilizar los datos CDC 2000 para edades entre 2 y 20 años, pues nos estamos centrando en adolescentes solamente
+
+    def bmi_percentile(bmi, age_years, sex):
+
+        if pd.isna(bmi) or pd.isna(age_years) or pd.isna(sex):
+            return np.nan
+
+        df_t = df_cdc_bmi[(df_cdc_bmi["Agemos"]==(age_years*12 + 0.5)) & (df_cdc_bmi["Sex"]==sex)]
+        L = df_t["L"].iloc[0]
+        M = df_t["M"].iloc[0]
+        S = df_t["S"].iloc[0]
+
+        z = ((bmi/M)**L - 1) / (L*S)
+        return stats.norm.cdf(z) * 100
+
+    return (bmi_percentile,)
+
+
+@app.cell
+def _(bmi_percentile, df_filtered):
+    df_filtered["bmi_perc"] = df_filtered.apply(
+        lambda row: bmi_percentile(row['bmi'], row['ridageyr'], 1 if row['riagendr'] == "Male" else 2), axis=1
+    )
+    return
+
+
+@app.cell
+def _(df_filtered):
+    df_filtered
+    return
 
 
 @app.cell(hide_code=True)
@@ -181,10 +234,10 @@ def _(df_filtered, mf):
     # Pero aquí todavía no hemos creado un target para el sindrome metabolico
 
     # kernel de imputacion
-    kernel = mf.ImputationKernel(df_filtered.reset_index(), random_state=42)
+    kernel = mf.ImputationKernel(df_filtered.reset_index(drop=True), random_state=42)
 
     # Ejecutar 2 iteraciones
-    kernel.mice(2)
+    kernel.mice(2, min_data_in_leaf=20) # some variables have very rare labels
 
     # Extraer el dataset imputado
     df_imputed = kernel.complete_data(0)
@@ -192,46 +245,63 @@ def _(df_filtered, mf):
     print(f"Valores faltantes después de la imputacíon")
     print(df_imputed.isna().sum().sum())
     print(df_imputed.shape)
-    return
+    return (df_imputed,)
 
 
 @app.cell
-def _(df_filtered):
+def _(df_imputed):
     # Target
     # Se tienen que cumplir 3 de 5 criterios
 
     # Criterio 1 - cintura (depende del sexo)
-    c1 = ((df_filtered["riagendr"] == "Male") & (df_filtered["bmxwaist"] >= 102)) | \
-         ((df_filtered["riagendr"] == "Female") & (df_filtered["bmxwaist"] >= 88))
+    c1 = ((df_imputed["riagendr"] == "Male") & (df_imputed["bmxwaist"] >= 102)) | \
+         ((df_imputed["riagendr"] == "Female") & (df_imputed["bmxwaist"] >= 88))
 
     # Criterio II: triglicéridos
-    c2 = df_filtered["lbxtr"] >= 130
+    c2 = df_imputed["lbxtr"] >= 130
 
     # Criterio III: HDL-C (depende del sexo)
-    c3 = ((df_filtered["riagendr"] == "Male") & (df_filtered["lbdhdd"] < 40)) | \
-        ((df_filtered["riagendr"] == "Female") & (df_filtered["lbdhdd"] < 50))
+    c3 = ((df_imputed["riagendr"] == "Male") & (df_imputed["lbdhdd"] < 40)) | \
+        ((df_imputed["riagendr"] == "Female") & (df_imputed["lbdhdd"] < 50))
 
     # Criterio IV: presión arterial
-    c4 = (df_filtered["bpxsy1"] >= 130) | (df_filtered["bpxdi1"] >= 85)
+    c4 = (df_imputed["bpxsy1"] >= 130) | (df_imputed["bpxdi1"] >= 85)
 
     # Criterio V: glucosa en ayunas
-    c5 = df_filtered["lbdglusi"] >= 5.6
+    c5 = df_imputed["lbdglusi"] >= 5.6
 
     # Target: 1 si cumple 3 o más criterios
-    df_filtered["target"] = (c1.astype(int) + c2.astype(int) + c3.astype(int) + 
+    df_imputed["target"] = (c1.astype(int) + c2.astype(int) + c3.astype(int) + 
                              c4.astype(int) + c5.astype(int)) >= 3
-    df_filtered["target"] = df_filtered["target"].astype(int)
+    df_imputed["target"] = df_imputed["target"].astype(int)
 
-    print(df_filtered["target"].value_counts()) 
+    print(df_imputed["target"].value_counts()) 
     return
 
 
 @app.cell
-def _(df_filtered, plt):
-    # Variable definition and variable selection
+def _(df_imputed):
+    ## Save filtered dataset
+    df_imputed.info()
+    return
 
-    plt.hist(df_filtered['pad680'])
-    plt.show()
+
+@app.cell
+def _(df_imputed):
+    df_imputed
+    return
+
+
+@app.cell
+def _():
+    #df_imputed.to_csv(path_or_buf="../data/nhanes_processed.csv", header=True, index=None)
+    return
+
+
+@app.cell
+def _(df_imputed):
+    for v in df_imputed.columns:
+        print(v)
     return
 
 
