@@ -17,6 +17,9 @@
 # Paper
 /paper
 
+# Plots
+/plots/*.png
+
 # Nhanes cycles
 data/bmx.csv
 data/bpx.csv
