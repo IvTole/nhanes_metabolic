@@ -16,3 +16,16 @@
 
 # Paper
 /paper
+
+# Nhanes cycles
+data/bmx.csv
+data/bpx.csv
+data/dbq.csv
+data/demo.csv
+data/diq.csv
+data/glu.csv
+data/hdl.csv
+data/nhanes_processed.csv
+data/nhanes_raw.csv
+data/paq.csv
+data/trigly.csv
