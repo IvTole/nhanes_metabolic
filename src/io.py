@@ -2,8 +2,7 @@ import pandas as pd
 from typing import Optional, Tuple
 
 # External modules
-from src.config import train_data_path
-from src.config import FEATURES, TARGET
+from src.config import train_data_path, FEATURES_SELECTED, TARGET
 
 class Dataset:
 
@@ -38,7 +37,7 @@ class Dataset:
 
         df_train = self.load_data()
 
-        X_train = df_train.drop(columns=[TARGET], axis=1)
+        X_train = df_train[FEATURES_SELECTED]
         y_train = df_train[TARGET]
 
         return X_train, y_train
