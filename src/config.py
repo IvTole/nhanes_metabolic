@@ -145,33 +145,51 @@ COL_BMI_PERC = "bmi_perc"
 TARGET = "target"
 
 # Selección de variables para el modelo
-  # Se excluyen las variables diagnósticas (bmxwaist, bpxsy1, bpxdi1, lbxtr, lbdhdd, lbdglusi)
-  # ya que forman parte de la definición del target (MetS)
-  
-FEATURES = ["ridageyr", "riagendr", "ridreth1", "indfmpir", "diq170", "pad680" # Demográficas
-            "bmxwt", "bmxht", "bmxleg", "bmxarml", "bmxarmc", "bmi_perc", # Medidas corporales
-            "dbd895", "dbd900", "dbd905", "dbd910", # Comportamiento alimentario
-            "dbq370", "dbd381", "dbq400", "dbd411", "dbq421", "dbq424",
+# Se excluyen las variables diagnósticas (bmxwaist, bpxsy1, bpxdi1, lbxtr, lbdhdd, lbdglusi)
+# ya que forman parte de la definición del target (MetS)
+
+FEATURES = [
+    # Demográficas
+    COL_RIDAGEYR, COL_RIAGENDR, COL_RIDRETH1, COL_INDFMPIR, COL_DIQ170, COL_PAD680,
+    # Medidas corporales
+    COL_BMXWT, COL_BMXHT, COL_BMXLEG, COL_BMXARML, COL_BMXARMC, COL_BMI_PERC,
+    # Comportamiento alimentario
+    COL_DBD895, COL_DBD900, COL_DBD905, COL_DBD910,
+    COL_DBQ370, COL_DBD381, COL_DBQ400, COL_DBD411, COL_DBQ421, COL_DBQ424,
 ]
-  
+
+# Top 10 features seleccionadas por importancia de permutación (Random Forest)
+# Coinciden en su mayoría con las 5 seleccionadas por LASSO en Zhang et al. (2025)
+#
+# | Variable   | Descripción                                              |
+# |------------|----------------------------------------------------------|
+# | bmxwt      | Peso corporal (kg)                                       |
+# | bmi_perc   | Percentil de IMC ajustado por edad y sexo (CDC 2000)     |
+# | bmxleg     | Longitud del muslo (cm)                                  |
+# | bmxht      | Talla (cm)                                               |
+# | bmxarmc    | Circunferencia del brazo superior (cm)                   |
+# | ridreth1   | Raza/etnia                                               |
+# | dbd895     | Nº de comidas fuera de casa en los últimos 7 días        |
+# | bmxarml    | Longitud del brazo superior (cm)                         |
+# | dbd411     | Nº de veces/semana que toma desayuno escolar             |
+# | dbq421     | Precio del desayuno escolar (gratis/reducido/completo)   |
+
+FEATURES_SELECTED = [
+    COL_BMXWT, COL_BMI_PERC, COL_BMXLEG, COL_BMXHT, COL_BMXARMC,
+    COL_RIDRETH1, COL_DBD895, COL_BMXARML, COL_DBD411, COL_DBQ421,
+]
+
 TARGET = "target"
 
 # Numéricas: escalar con StandardScaler
 NUM_COLS = [
-            COL_RIDAGEYR, COL_INDFMPIR,
-            COL_BMXWT, COL_BMXHT, COL_BMXLEG, COL_BMXARML, COL_BMXARMC,
-            COL_BMI_PERC,
-            COL_DBD895, COL_DBD900, COL_DBD905, COL_DBD910, COL_DBD381,
-            COL_DBD411,
-            COL_PAD680,
-]
-  
-CAT_COLS = [
-            COL_RIAGENDR, COL_RIDRETH1, COL_DIQ170,
-            COL_DBQ370, COL_DBQ400, COL_DBQ421, COL_DBQ424,
+    COL_BMXWT, COL_BMI_PERC, COL_BMXLEG, COL_BMXHT, COL_BMXARMC,
+    COL_DBD895, COL_BMXARML, COL_DBD411,
 ]
 
-PASSTHROUGH_COLS = []
+CAT_COLS = [
+    COL_RIDRETH1, COL_DBQ421,
+]
 
 # MLFlow
 MLFLOW_TRACKING_URL = "http://mlflow.vanotole-lab.com"
