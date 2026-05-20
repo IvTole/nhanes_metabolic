@@ -1,6 +1,6 @@
 from sklearn.compose import ColumnTransformer
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder, OrdinalEncoder
-from src.config import NUM_COLS, CAT_COLS, PASSTHROUGH_COLS
+from src.config import NUM_COLS, CAT_COLS
 
 def build_preprocessor() -> ColumnTransformer:
 
